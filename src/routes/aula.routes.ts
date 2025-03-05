@@ -74,45 +74,19 @@ router.get('/modulo/:moduloId', async (req, res) => {
   }
 });
 
-// Marcar aula como concluída
-router.put('/:id/concluir', async (req, res) => {
+// Atualizar aula
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { dataRealizacao } = req.body;
+    const { nome, descricao, cargaHoraria, siglaTecnica } = req.body;
 
     const aula = await prisma.aula.update({
       where: { id: Number(id) },
       data: {
-        status: 'CONCLUIDA',
-        dataRealizacao: dataRealizacao ? new Date(dataRealizacao) : new Date()
-      },
-      include: {
-        modulo: {
-          include: {
-            curso: true
-          }
-        }
-      }
-    });
-
-    return res.json(aula);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Atualizar status da aula
-router.put('/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, dataRealizacao } = req.body;
-
-    const aula = await prisma.aula.update({
-      where: { id: Number(id) },
-      data: {
-        status,
-        dataRealizacao: dataRealizacao ? new Date(dataRealizacao) : null
+        nome,
+        descricao,
+        cargaHoraria,
+        siglaTecnica
       },
       include: {
         modulo: {

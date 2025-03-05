@@ -90,11 +90,11 @@ router.put('/:id/habilitar', async (req, res) => {
   }
 });
 
-// Atualizar data de conclusão do módulo
+// Atualizar conclusão do módulo
 router.put('/:id/concluir', async (req, res) => {
   try {
     const { id } = req.params;
-    const { alunoId, dataConclusao } = req.body;
+    const { alunoId, dataTermino } = req.body;
 
     const alunoModulo = await prisma.alunoModulo.update({
       where: {
@@ -104,8 +104,8 @@ router.put('/:id/concluir', async (req, res) => {
         }
       },
       data: {
-        dataConclusao: dataConclusao ? new Date(dataConclusao) : null,
-        status: dataConclusao ? 'CONCLUIDO' : 'PENDENTE'
+        dataTermino: dataTermino ? new Date(dataTermino) : null,
+        status: dataTermino ? 'CONCLUIDO' : 'PENDENTE'
       },
       include: {
         aluno: true,
