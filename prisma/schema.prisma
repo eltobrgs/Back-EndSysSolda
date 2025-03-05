@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Aluno {
+  id            Int           @id @default(autoincrement())
+  nome          String
+  cpf           String        @unique
+  email         String        @unique
+  telefone      String
+  usaOculos     Boolean       @default(false)
+  destroCanhoto String        @default("DESTRO")
+  idade         Int
+  cursoId       Int
+  curso         Curso         @relation(fields: [cursoId], references: [id])
+  alunoModulos  AlunoModulo[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Curso {
+  id                 Int      @id @default(autoincrement())
+  nome               String
+  descricao         String
+  cargaHorariaTotal Int
+  preRequisitos     String?
+  materialNecessario String?
+  modulos           Modulo[]
+  alunos            Aluno[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Modulo {
+  id            Int           @id @default(autoincrement())
+  nome          String
+  descricao     String
+  cursoId       Int
+  curso         Curso         @relation(fields: [cursoId], references: [id])
+  aulas         Aula[]
+  alunoModulos  AlunoModulo[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Aula {
+  id            Int      @id @default(autoincrement())
+  nome          String
+  descricao     String
+  cargaHoraria  Int
+  siglaTecnica  String?  // Novo campo
+  moduloId      Int
+  modulo        Modulo   @relation(fields: [moduloId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("aulas")
+}
+
+model AlunoModulo {
+  id          Int      @id @default(autoincrement())
+  aluno       Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  alunoId     Int
+  modulo      Modulo   @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  moduloId    Int
+  status      String   @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, CONCLUIDO
+  dataInicio  DateTime?
+  dataTermino DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([alunoId, moduloId])
+}
