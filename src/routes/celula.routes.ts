@@ -1,109 +1,119 @@
-import { Router } from 'express';
-import { prisma } from '../server';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { Router, Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
+import { authMiddleware } from '../middlewares/auth';
+import { z } from 'zod';
 
-const router = Router();
+const celulaRouter = Router();
 
-router.use(authMiddleware);
-
-// Listar todas as células
-router.get('/', async (req, res) => {
+celulaRouter.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const celulas = await prisma.celula.findMany({
       include: {
         modulo: true,
-        presencas: {
-          include: {
-            aluno: true
-          }
-        }
+        presencas: true
       }
     });
-
     return res.json(celulas);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+  } catch (err: unknown) {
+    console.error('Erro ao buscar células:', err);
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao buscar células' });
   }
 });
 
-// Buscar célula por ID
-router.get('/:id', async (req, res) => {
+celulaRouter.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const celula = await prisma.celula.findUnique({
       where: { id: Number(id) },
       include: {
         modulo: true,
-        presencas: {
-          include: {
-            aluno: true
-          }
-        }
+        presencas: true
       }
     });
-
     if (!celula) {
       return res.status(404).json({ error: 'Célula não encontrada' });
     }
-
     return res.json(celula);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+  } catch (err: unknown) {
+    console.error('Erro ao buscar célula:', err);
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao buscar célula' });
   }
 });
 
-// Buscar presenças de uma célula
-router.get('/:id/presencas', async (req, res) => {
+const createCelulaSchema = z.object({
+  ordem: z.number(),
+  siglaTecnica: z.string(),
+  moduloId: z.number()
+});
+
+celulaRouter.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const presencas = await prisma.presenca.findMany({
-      where: { celulaId: Number(id) },
+    const data = createCelulaSchema.parse(req.body);
+    const celula = await prisma.celula.create({
+      data,
       include: {
-        aluno: true
+        modulo: true
       }
     });
-
-    return res.json(presencas);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.status(201).json(celula);
+  } catch (err: unknown) {
+    console.error('Erro ao criar célula:', err);
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
+    }
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao criar célula' });
   }
 });
 
-// Registrar presença em uma célula
-router.post('/:id/presencas', async (req, res) => {
+const updateCelulaSchema = createCelulaSchema;
+
+celulaRouter.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { alunoId, presente, horasFeitas } = req.body;
-
-    const presenca = await prisma.presenca.upsert({
-      where: {
-        alunoId_celulaId: {
-          alunoId: Number(alunoId),
-          celulaId: Number(id)
-        }
-      },
-      update: {
-        presente,
-        horasFeitas,
-        data: new Date()
-      },
-      create: {
-        alunoId: Number(alunoId),
-        celulaId: Number(id),
-        presente,
-        horasFeitas,
-        data: new Date()
+    const data = updateCelulaSchema.parse(req.body);
+    const celula = await prisma.celula.update({
+      where: { id: Number(id) },
+      data,
+      include: {
+        modulo: true
       }
     });
-
-    return res.json(presenca);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.json(celula);
+  } catch (err: unknown) {
+    console.error('Erro ao atualizar célula:', err);
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
+    }
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao atualizar célula' });
   }
 });
 
-export default router; 
+celulaRouter.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.celula.delete({
+      where: { id: Number(id) }
+    });
+    return res.status(204).send();
+  } catch (err: unknown) {
+    console.error('Erro ao excluir célula:', err);
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao excluir célula' });
+  }
+});
+
+export default celulaRouter; 

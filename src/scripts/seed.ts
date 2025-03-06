@@ -1,68 +1,57 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   try {
-    // Limpar o banco de dados
-    console.log('Limpando banco de dados...');
+    console.log('🗑️ Limpando banco de dados...');
+    
+    // Limpar dados existentes
     await prisma.presenca.deleteMany();
-    await prisma.alunoModulo.deleteMany();
     await prisma.celula.deleteMany();
+    await prisma.alunoModulo.deleteMany();
     await prisma.modulo.deleteMany();
     await prisma.aluno.deleteMany();
     await prisma.curso.deleteMany();
     await prisma.usuario.deleteMany();
 
-    // Criar usuário admin
-    console.log('Criando usuário administrador...');
-    const adminUser = await prisma.usuario.create({
+    console.log('👤 Criando usuário administrador...');
+    
+    // Criar usuário administrador
+    const admin = await prisma.usuario.create({
       data: {
         nome: 'Administrador',
         email: 'admin@syssolda.com',
-        senha: await bcrypt.hash('admin123', 10),
-        role: 'ADMIN',
-      },
+        senha: await hash('admin123', 8),
+        role: 'ADMIN'
+      }
     });
-    console.log('Usuário admin criado:', adminUser.email);
 
-    // Criar cursos
-    console.log('Criando cursos...');
-    const cursoPrincipal = await prisma.curso.create({
+    console.log('📚 Criando cursos...');
+    
+    // Criar curso de Soldagem Industrial Avançada
+    const cursoAvancado = await prisma.curso.create({
       data: {
         nome: 'Soldagem Industrial Avançada',
-        descricao: 'Curso completo de soldagem industrial com práticas avançadas',
+        descricao: 'Curso avançado de soldagem industrial com foco em técnicas especializadas',
         cargaHorariaTotal: 120,
-        preRequisitos: 'Idade mínima de 18 anos, Ensino Médio Completo',
-        materialNecessario: 'EPI completo, material será fornecido pelo curso',
+        preRequisitos: 'Conhecimento básico em soldagem',
+        materialNecessario: 'EPI completo, eletrodos e materiais específicos',
         modulos: {
           create: [
             {
-              nome: 'Fundamentos de Soldagem',
-              descricao: 'Introdução aos conceitos básicos e segurança',
-              cargaHorariaTotal: 40,
-              celulas: {
-                create: [
-                  { ordem: 1, siglaTecnica: 'FUN-1' },
-                  { ordem: 2, siglaTecnica: 'FUN-2' },
-                  { ordem: 3, siglaTecnica: 'FUN-3' },
-                  { ordem: 4, siglaTecnica: 'FUN-4' },
-                ],
-              },
-            },
-            {
               nome: 'Soldagem MIG/MAG',
-              descricao: 'Técnicas de soldagem com processos MIG/MAG',
+              descricao: 'Técnicas avançadas de soldagem MIG/MAG',
               cargaHorariaTotal: 40,
               celulas: {
                 create: [
-                  { ordem: 1, siglaTecnica: 'MIG-1' },
-                  { ordem: 2, siglaTecnica: 'MIG-2' },
-                  { ordem: 3, siglaTecnica: 'MIG-3' },
-                  { ordem: 4, siglaTecnica: 'MIG-4' },
-                ],
-              },
+                  { ordem: 1, siglaTecnica: 'MIG1' },
+                  { ordem: 2, siglaTecnica: 'MIG2' },
+                  { ordem: 3, siglaTecnica: 'MIG3' },
+                  { ordem: 4, siglaTecnica: 'MIG4' }
+                ]
+              }
             },
             {
               nome: 'Soldagem TIG',
@@ -70,184 +59,196 @@ async function main() {
               cargaHorariaTotal: 40,
               celulas: {
                 create: [
-                  { ordem: 1, siglaTecnica: 'TIG-1' },
-                  { ordem: 2, siglaTecnica: 'TIG-2' },
-                  { ordem: 3, siglaTecnica: 'TIG-3' },
-                  { ordem: 4, siglaTecnica: 'TIG-4' },
-                ],
-              },
-            },
-          ],
-        },
-      },
-      include: {
-        modulos: {
-          include: {
-            celulas: true,
-          },
-        },
-      },
-    });
-
-    const cursoBasico = await prisma.curso.create({
-      data: {
-        nome: 'Introdução à Soldagem',
-        descricao: 'Curso básico para iniciantes em soldagem',
-        cargaHorariaTotal: 60,
-        preRequisitos: 'Idade mínima de 16 anos',
-        materialNecessario: 'EPI básico, material será fornecido pelo curso',
-        modulos: {
-          create: [
-            {
-              nome: 'Segurança na Soldagem',
-              descricao: 'Fundamentos de segurança e EPIs',
-              cargaHorariaTotal: 20,
-              celulas: {
-                create: [
-                  { ordem: 1, siglaTecnica: 'SEG-1' },
-                  { ordem: 2, siglaTecnica: 'SEG-2' },
-                ],
-              },
+                  { ordem: 1, siglaTecnica: 'TIG1' },
+                  { ordem: 2, siglaTecnica: 'TIG2' },
+                  { ordem: 3, siglaTecnica: 'TIG3' },
+                  { ordem: 4, siglaTecnica: 'TIG4' }
+                ]
+              }
             },
             {
-              nome: 'Soldagem Básica',
-              descricao: 'Introdução às técnicas básicas',
+              nome: 'Soldagem Especial',
+              descricao: 'Técnicas especiais de soldagem',
               cargaHorariaTotal: 40,
               celulas: {
                 create: [
-                  { ordem: 1, siglaTecnica: 'BAS-1' },
-                  { ordem: 2, siglaTecnica: 'BAS-2' },
-                  { ordem: 3, siglaTecnica: 'BAS-3' },
-                ],
-              },
-            },
-          ],
-        },
+                  { ordem: 1, siglaTecnica: 'ESP1' },
+                  { ordem: 2, siglaTecnica: 'ESP2' },
+                  { ordem: 3, siglaTecnica: 'ESP3' },
+                  { ordem: 4, siglaTecnica: 'ESP4' }
+                ]
+              }
+            }
+          ]
+        }
       },
       include: {
         modulos: {
           include: {
-            celulas: true,
-          },
-        },
-      },
+            celulas: true
+          }
+        }
+      }
     });
 
-    console.log('Cursos criados com sucesso!');
+    // Criar curso de Introdução à Soldagem
+    const cursoBasico = await prisma.curso.create({
+      data: {
+        nome: 'Introdução à Soldagem',
+        descricao: 'Curso básico de soldagem para iniciantes',
+        cargaHorariaTotal: 60,
+        preRequisitos: 'Nenhum',
+        materialNecessario: 'EPI básico',
+        modulos: {
+          create: [
+            {
+              nome: 'Fundamentos da Soldagem',
+              descricao: 'Conceitos básicos e segurança',
+              cargaHorariaTotal: 30,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'FUN1' },
+                  { ordem: 2, siglaTecnica: 'FUN2' },
+                  { ordem: 3, siglaTecnica: 'FUN3' }
+                ]
+              }
+            },
+            {
+              nome: 'Práticas Básicas',
+              descricao: 'Práticas iniciais de soldagem',
+              cargaHorariaTotal: 30,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'PRA1' },
+                  { ordem: 2, siglaTecnica: 'PRA2' }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      include: {
+        modulos: {
+          include: {
+            celulas: true
+          }
+        }
+      }
+    });
+
+    console.log('👥 Criando alunos...');
 
     // Criar alunos
-    console.log('Criando alunos...');
-    const alunos = await Promise.all([
-      prisma.aluno.create({
-        data: {
-          nome: 'João Silva',
-          cpf: '123.456.789-00',
-          email: 'joao.silva@email.com',
-          telefone: '(11) 98765-4321',
-          idade: 25,
-          usaOculos: true,
-          destroCanhoto: 'DESTRO',
-          cursoId: cursoPrincipal.id,
-          alunoModulos: {
-            create: cursoPrincipal.modulos.map((modulo) => ({
-              moduloId: modulo.id,
-              status: 'PENDENTE',
-              dataInicio: new Date(),
-            })),
-          },
-        },
-      }),
-      prisma.aluno.create({
-        data: {
-          nome: 'Maria Santos',
-          cpf: '987.654.321-00',
-          email: 'maria.santos@email.com',
-          telefone: '(11) 91234-5678',
-          idade: 22,
-          usaOculos: false,
-          destroCanhoto: 'CANHOTO',
-          cursoId: cursoBasico.id,
-          alunoModulos: {
-            create: cursoBasico.modulos.map((modulo) => ({
-              moduloId: modulo.id,
-              status: 'PENDENTE',
-              dataInicio: new Date(),
-            })),
-          },
-        },
-      }),
-      prisma.aluno.create({
-        data: {
-          nome: 'Pedro Oliveira',
-          cpf: '456.789.123-00',
-          email: 'pedro.oliveira@email.com',
-          telefone: '(11) 94567-8901',
-          idade: 30,
-          usaOculos: true,
-          destroCanhoto: 'DESTRO',
-          cursoId: cursoPrincipal.id,
-          alunoModulos: {
-            create: cursoPrincipal.modulos.map((modulo) => ({
-              moduloId: modulo.id,
-              status: 'PENDENTE',
-              dataInicio: new Date(),
-            })),
-          },
-        },
-      }),
-    ]);
+    const joao = await prisma.aluno.create({
+      data: {
+        nome: 'João Silva',
+        cpf: '123.456.789-00',
+        email: 'joao@example.com',
+        telefone: '(11) 98765-4321',
+        idade: 25,
+        usaOculos: true,
+        destroCanhoto: 'DESTRO',
+        cursoId: cursoAvancado.id,
+        alunoModulos: {
+          create: cursoAvancado.modulos.map(modulo => ({
+            moduloId: modulo.id,
+            status: 'pendente',
+            dataInicio: null,
+            dataFim: null
+          }))
+        }
+      }
+    });
 
-    console.log('Alunos criados com sucesso!');
+    const maria = await prisma.aluno.create({
+      data: {
+        nome: 'Maria Santos',
+        cpf: '987.654.321-00',
+        email: 'maria@example.com',
+        telefone: '(11) 91234-5678',
+        idade: 30,
+        usaOculos: false,
+        destroCanhoto: 'DESTRO',
+        cursoId: cursoBasico.id,
+        alunoModulos: {
+          create: cursoBasico.modulos.map(modulo => ({
+            moduloId: modulo.id,
+            status: 'pendente',
+            dataInicio: null,
+            dataFim: null
+          }))
+        }
+      }
+    });
 
-    // Criar algumas presenças de exemplo
-    console.log('Criando registros de presença...');
-    
-    // Para o primeiro aluno
-    const primeiroModulo = cursoPrincipal.modulos[0];
+    const pedro = await prisma.aluno.create({
+      data: {
+        nome: 'Pedro Oliveira',
+        cpf: '456.789.123-00',
+        email: 'pedro@example.com',
+        telefone: '(11) 94567-8901',
+        idade: 28,
+        usaOculos: false,
+        destroCanhoto: 'CANHOTO',
+        cursoId: cursoAvancado.id,
+        alunoModulos: {
+          create: cursoAvancado.modulos.map(modulo => ({
+            moduloId: modulo.id,
+            status: 'pendente',
+            dataInicio: null,
+            dataFim: null
+          }))
+        }
+      }
+    });
+
+    console.log('✅ Registrando algumas presenças...');
+
+    // Registrar algumas presenças para João
+    const joaoModulo1 = cursoAvancado.modulos[0];
     await Promise.all(
-      primeiroModulo.celulas.map(async (celula, index) => {
+      joaoModulo1.celulas.slice(0, 2).map(async (celula, index) => {
         await prisma.presenca.create({
           data: {
-            alunoId: alunos[0].id,
+            alunoId: joao.id,
             celulaId: celula.id,
-            presente: index < 2 ? true : null, // Primeiras duas células com presença, resto não registrado
-            horasFeitas: index < 2 ? 4 : 0,
-            data: index < 2 ? new Date() : null,
-          },
+            presente: true,
+            horasFeitas: 4,
+            data: new Date(Date.now() - (index * 24 * 60 * 60 * 1000)) // Dias anteriores
+          }
         });
       })
     );
 
-    // Para o segundo aluno
-    const moduloBasico = cursoBasico.modulos[0];
-    await Promise.all(
-      moduloBasico.celulas.map(async (celula, index) => {
-        await prisma.presenca.create({
-          data: {
-            alunoId: alunos[1].id,
-            celulaId: celula.id,
-            presente: index === 0 ? true : null, // Primeira célula com presença, resto não registrado
-            horasFeitas: index === 0 ? 4 : 0,
-            data: index === 0 ? new Date() : null,
-          },
-        });
-      })
-    );
+    // Registrar uma presença para Maria
+    const mariaModulo1 = cursoBasico.modulos[0];
+    if (mariaModulo1.celulas[0]) {
+      await prisma.presenca.create({
+        data: {
+          alunoId: maria.id,
+          celulaId: mariaModulo1.celulas[0].id,
+          presente: true,
+          horasFeitas: 4,
+          data: new Date()
+        }
+      });
+    }
 
-    console.log('Registros de presença criados com sucesso!');
-    console.log('Seed concluído com sucesso!');
+    console.log('✨ Seed concluído com sucesso!');
+    console.log('Dados de acesso do administrador:');
+    console.log('Email: admin@syssolda.com');
+    console.log('Senha: admin123');
 
   } catch (error) {
     console.error('Erro durante o seed:', error);
     throw error;
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });
