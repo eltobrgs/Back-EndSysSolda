@@ -2,8 +2,6 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middlewares/auth';
 import { prisma } from '../lib/prisma';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
 
 const prismaClient = new PrismaClient();
 const alunoRouter = Router();
@@ -24,7 +22,11 @@ alunoRouter.get('/', async (req: Request, res: Response) => {
             },
           },
         },
-        alunoModulos: true,
+        alunoModulos: {
+          include: {
+            modulo: true,
+          },
+        },
       },
     });
     return res.json(alunos);
@@ -50,7 +52,11 @@ alunoRouter.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
             },
           },
         },
-        alunoModulos: true,
+        alunoModulos: {
+          include: {
+            modulo: true,
+          },
+        },
       },
     });
 
@@ -65,99 +71,104 @@ alunoRouter.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
   }
 });
 
-const createAlunoSchema = z.object({
-  nome: z.string(),
-  cpf: z.string(),
-  email: z.string().email(),
-  telefone: z.string(),
-  idade: z.number(),
-  usaOculos: z.boolean(),
-  destroCanhoto: z.enum(['DESTRO', 'CANHOTO']),
-  cursoId: z.number(),
-  modulos: z.array(z.object({
-    moduloId: z.number(),
-    status: z.string(),
-    dataInicio: z.string().nullable(),
-    dataFim: z.string().nullable()
-  }))
-});
-
-// Tipos
-type ModuloData = {
-  moduloId: number;
-  status: string;
-  dataInicio: string | null;
-  dataFim: string | null;
-};
-
-type CelulaProgresso = {
-  celulaId: number;
-  presente: boolean;
-  horasFeitas: number;
-  data: string;
-};
-
-type ModuloStatus = {
-  moduloId: number;
-  status: string;
-  dataInicio: string | null;
-  dataFim: string | null;
-  celulasProgresso: CelulaProgresso[];
-};
-
 // Criar aluno
 alunoRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const data = createAlunoSchema.parse(req.body);
-    const { modulos, ...alunoData } = data;
+    const {
+      nome,
+      cpf,
+      email,
+      telefone,
+      idade,
+      usaOculos,
+      destroCanhoto,
+      cursoId,
+      modulos,
+    } = req.body;
 
-    const aluno = await prisma.aluno.create({
+    // Verificar se o curso existe
+    const cursoExiste = await prismaClient.curso.findUnique({
+      where: { id: Number(cursoId) },
+    });
+
+    if (!cursoExiste) {
+      return res.status(400).json({ error: 'Curso não encontrado' });
+    }
+
+    // Criar o aluno
+    const aluno = await prismaClient.aluno.create({
       data: {
-        ...alunoData,
-        alunoModulos: {
-          create: modulos.map((modulo: ModuloData) => ({
-            moduloId: modulo.moduloId,
-            status: modulo.status,
-            dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
-            dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null
-          }))
-        }
+        nome,
+        cpf,
+        email,
+        telefone,
+        idade: Number(idade),
+        usaOculos: Boolean(usaOculos),
+        destroCanhoto,
+        cursoId: Number(cursoId),
       },
+    });
+
+    // Adicionar os módulos selecionados
+    if (modulos && modulos.length > 0) {
+      await Promise.all(
+        modulos.map(async (modulo: { moduloId: number; dataInicio: string | null; dataFim: string | null }) => {
+          await prismaClient.alunoModulo.create({
+            data: {
+              alunoId: aluno.id,
+              moduloId: Number(modulo.moduloId),
+              status: 'PENDENTE',
+              dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
+              dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null,
+            },
+          });
+        })
+      );
+    }
+
+    // Buscar o aluno com os relacionamentos
+    const alunoCompleto = await prismaClient.aluno.findUnique({
+      where: { id: aluno.id },
       include: {
         curso: {
           include: {
             modulos: {
               include: {
-                celulas: true
-              }
-            }
-          }
+                celulas: true,
+              },
+            },
+          },
         },
-        alunoModulos: true
-      }
+        alunoModulos: {
+          include: {
+            modulo: true,
+          },
+        },
+      },
     });
 
-    return res.status(201).json(aluno);
-  } catch (err: unknown) {
-    console.error('Erro ao criar aluno:', err);
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors });
-    }
-    if (err instanceof Error) {
-      return res.status(500).json({ error: err.message });
-    }
+    return res.status(201).json(alunoCompleto);
+  } catch (error) {
+    console.error('Erro ao criar aluno:', error);
     return res.status(500).json({ error: 'Erro ao criar aluno' });
   }
 });
-
-const updateAlunoSchema = createAlunoSchema;
 
 // Atualizar aluno
 alunoRouter.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
-    const data = updateAlunoSchema.parse(req.body);
-    const { modulos, ...alunoData } = data;
+    const {
+      nome,
+      cpf,
+      email,
+      telefone,
+      idade,
+      usaOculos,
+      destroCanhoto,
+      cursoId,
+      modulos,
+    } = req.body;
 
     // Verificar se o aluno existe
     const alunoExiste = await prismaClient.aluno.findUnique({
@@ -169,9 +180,9 @@ alunoRouter.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
     }
 
     // Verificar se o curso existe
-    if (alunoData.cursoId) {
+    if (cursoId) {
       const cursoExiste = await prismaClient.curso.findUnique({
-        where: { id: Number(alunoData.cursoId) },
+        where: { id: Number(cursoId) },
       });
 
       if (!cursoExiste) {
@@ -179,25 +190,47 @@ alunoRouter.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
       }
     }
 
-    // Primeiro, exclui todos os módulos existentes
-    await prismaClient.alunoModulo.deleteMany({
-      where: { alunoId: Number(id) }
-    });
-
-    // Depois, atualiza o aluno e cria os novos módulos
+    // Atualizar o aluno
     const aluno = await prismaClient.aluno.update({
       where: { id: Number(id) },
       data: {
-        ...alunoData,
-        alunoModulos: {
-          create: modulos.map((modulo: ModuloData) => ({
-            moduloId: modulo.moduloId,
-            status: modulo.status,
-            dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
-            dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null
-          }))
-        }
+        nome,
+        cpf,
+        email,
+        telefone,
+        idade: Number(idade),
+        usaOculos: Boolean(usaOculos),
+        destroCanhoto,
+        cursoId: cursoId ? Number(cursoId) : undefined,
       },
+    });
+
+    // Atualizar os módulos
+    if (modulos && modulos.length > 0) {
+      // Remover todos os módulos atuais
+      await prismaClient.alunoModulo.deleteMany({
+        where: { alunoId: Number(id) },
+      });
+
+      // Adicionar os módulos selecionados
+      await Promise.all(
+        modulos.map(async (modulo: { moduloId: number; dataInicio: string | null; dataFim: string | null }) => {
+          await prismaClient.alunoModulo.create({
+            data: {
+              alunoId: aluno.id,
+              moduloId: Number(modulo.moduloId),
+              status: 'PENDENTE',
+              dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
+              dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null,
+            },
+          });
+        })
+      );
+    }
+
+    // Buscar o aluno com os relacionamentos
+    const alunoCompleto = await prismaClient.aluno.findUnique({
+      where: { id: aluno.id },
       include: {
         curso: {
           include: {
@@ -208,19 +241,17 @@ alunoRouter.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
             },
           },
         },
-        alunoModulos: true,
+        alunoModulos: {
+          include: {
+            modulo: true,
+          },
+        },
       },
     });
 
-    return res.json(aluno);
-  } catch (err: unknown) {
-    console.error('Erro ao atualizar aluno:', err);
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors });
-    }
-    if (err instanceof Error) {
-      return res.status(500).json({ error: err.message });
-    }
+    return res.json(alunoCompleto);
+  } catch (error) {
+    console.error('Erro ao atualizar aluno:', error);
     return res.status(500).json({ error: 'Erro ao atualizar aluno' });
   }
 });
@@ -251,81 +282,88 @@ alunoRouter.delete('/:id', async (req: Request<{ id: string }>, res: Response) =
   }
 });
 
-const updateProgressoSchema = z.object({
-  modulosStatus: z.array(z.object({
-    moduloId: z.number(),
-    status: z.string(),
-    dataInicio: z.string().nullable(),
-    dataFim: z.string().nullable(),
-    celulasProgresso: z.array(z.object({
-      celulaId: z.number(),
-      presente: z.boolean(),
-      horasFeitas: z.number(),
-      data: z.string()
-    }))
-  }))
-});
-
 // Atualizar progresso do aluno
 alunoRouter.put('/:id/progresso', async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
-    const data = updateProgressoSchema.parse(req.body);
+    const { modulosStatus } = req.body;
 
-    // Atualiza cada módulo e suas presenças
+    // Verificar se o aluno existe
+    const alunoExiste = await prismaClient.aluno.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!alunoExiste) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
+
+    // Atualizar o status de cada módulo
     await Promise.all(
-      data.modulosStatus.map(async (moduloStatus: ModuloStatus) => {
-        // Atualiza o status do módulo
+      modulosStatus.map(async (modulo: {
+        moduloId: number;
+        status: string;
+        dataInicio: string | null;
+        dataFim: string | null;
+        celulasProgresso: {
+          celulaId: number;
+          presente: boolean;
+          horasFeitas: number;
+          data: string | null;
+        }[];
+      }) => {
+        // Atualizar o status do módulo
         await prismaClient.alunoModulo.upsert({
           where: {
             alunoId_moduloId: {
               alunoId: Number(id),
-              moduloId: moduloStatus.moduloId
-            }
+              moduloId: modulo.moduloId,
+            },
           },
           update: {
-            status: moduloStatus.status,
-            dataInicio: moduloStatus.dataInicio ? new Date(moduloStatus.dataInicio) : null,
-            dataFim: moduloStatus.dataFim ? new Date(moduloStatus.dataFim) : null
+            status: modulo.status,
+            dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
+            dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null,
           },
           create: {
             alunoId: Number(id),
-            moduloId: moduloStatus.moduloId,
-            status: moduloStatus.status,
-            dataInicio: moduloStatus.dataInicio ? new Date(moduloStatus.dataInicio) : null,
-            dataFim: moduloStatus.dataFim ? new Date(moduloStatus.dataFim) : null
-          }
+            moduloId: modulo.moduloId,
+            status: modulo.status,
+            dataInicio: modulo.dataInicio ? new Date(modulo.dataInicio) : null,
+            dataFim: modulo.dataFim ? new Date(modulo.dataFim) : null,
+          },
         });
 
-        // Atualiza as presenças das células
-        await Promise.all(
-          moduloStatus.celulasProgresso.map(async (celulaProgresso: CelulaProgresso) => {
-            await prismaClient.presenca.upsert({
-              where: {
-                alunoId_celulaId: {
+        // Atualizar as presenças das células
+        if (modulo.celulasProgresso && modulo.celulasProgresso.length > 0) {
+          await Promise.all(
+            modulo.celulasProgresso.map(async (celula) => {
+              await prismaClient.presenca.upsert({
+                where: {
+                  alunoId_celulaId: {
+                    alunoId: Number(id),
+                    celulaId: celula.celulaId,
+                  },
+                },
+                update: {
+                  presente: celula.presente,
+                  horasFeitas: celula.horasFeitas,
+                  data: celula.data ? new Date(celula.data) : new Date(),
+                },
+                create: {
                   alunoId: Number(id),
-                  celulaId: celulaProgresso.celulaId
-                }
-              },
-              update: {
-                presente: celulaProgresso.presente,
-                horasFeitas: celulaProgresso.horasFeitas,
-                data: new Date(celulaProgresso.data)
-              },
-              create: {
-                alunoId: Number(id),
-                celulaId: celulaProgresso.celulaId,
-                presente: celulaProgresso.presente,
-                horasFeitas: celulaProgresso.horasFeitas,
-                data: new Date(celulaProgresso.data)
-              }
-            });
-          })
-        );
+                  celulaId: celula.celulaId,
+                  presente: celula.presente,
+                  horasFeitas: celula.horasFeitas,
+                  data: celula.data ? new Date(celula.data) : new Date(),
+                },
+              });
+            })
+          );
+        }
       })
     );
 
-    // Retorna o aluno atualizado com todas as informações
+    // Buscar o aluno atualizado com os relacionamentos
     const alunoAtualizado = await prismaClient.aluno.findUnique({
       where: { id: Number(id) },
       include: {
@@ -338,19 +376,17 @@ alunoRouter.put('/:id/progresso', async (req: Request<{ id: string }>, res: Resp
             },
           },
         },
-        alunoModulos: true,
+        alunoModulos: {
+          include: {
+            modulo: true,
+          },
+        },
       },
     });
 
     return res.json(alunoAtualizado);
-  } catch (err: unknown) {
-    console.error('Erro ao atualizar progresso:', err);
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors });
-    }
-    if (err instanceof Error) {
-      return res.status(500).json({ error: err.message });
-    }
+  } catch (error) {
+    console.error('Erro ao atualizar progresso:', error);
     return res.status(500).json({ error: 'Erro ao atualizar progresso' });
   }
 });
@@ -383,12 +419,10 @@ alunoRouter.get('/:alunoId/modulos/:moduloId/presencas', async (req: Request<{ a
         });
 
         return {
-          id: presenca?.id || 0,
-          alunoId: Number(alunoId),
           celulaId: celula.id,
-          data: presenca?.data || null,
           presente: presenca?.presente ?? null,
-          horasFeitas: presenca?.horasFeitas || 0
+          horasFeitas: presenca?.horasFeitas ?? 0,
+          data: presenca?.data || null,
         };
       })
     );
@@ -404,7 +438,7 @@ alunoRouter.get('/:alunoId/modulos/:moduloId/presencas', async (req: Request<{ a
 alunoRouter.post('/:id/presencas', async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
-    const { celulaId, presente, horasFeitas } = req.body;
+    const { celulaId, presente, horasFeitas, data } = req.body;
 
     const presenca = await prismaClient.presenca.upsert({
       where: {
@@ -416,15 +450,15 @@ alunoRouter.post('/:id/presencas', async (req: Request<{ id: string }>, res: Res
       update: {
         presente,
         horasFeitas,
-        data: new Date()
+        data: data ? new Date(data) : new Date(),
       },
       create: {
         alunoId: Number(id),
         celulaId: Number(celulaId),
         presente,
         horasFeitas,
-        data: new Date()
-      }
+        data: data ? new Date(data) : new Date(),
+      },
     });
 
     return res.json(presenca);
