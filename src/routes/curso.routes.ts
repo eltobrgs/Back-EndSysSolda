@@ -13,8 +13,7 @@ cursoRouter.get('/', async (req: Request, res: Response) => {
       include: {
         modulos: {
           include: {
-            aulas: true,
-            alunoModulos: true,
+            celulas: true,
           },
         },
         alunos: true,
@@ -22,8 +21,8 @@ cursoRouter.get('/', async (req: Request, res: Response) => {
     });
     return res.json(cursos);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao buscar cursos' });
+    console.error('Erro ao buscar cursos:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -36,8 +35,7 @@ cursoRouter.get('/:id', async (req: Request, res: Response) => {
       include: {
         modulos: {
           include: {
-            aulas: true,
-            alunoModulos: true,
+            celulas: true,
           },
         },
         alunos: true,
@@ -50,16 +48,16 @@ cursoRouter.get('/:id', async (req: Request, res: Response) => {
 
     return res.json(curso);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao buscar curso' });
+    console.error('Erro ao buscar curso:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // Criar curso
 cursoRouter.post('/', async (req: Request, res: Response) => {
-  try {
-    const { nome, descricao, cargaHorariaTotal, preRequisitos, materialNecessario, modulos } = req.body;
+  const { nome, descricao, cargaHorariaTotal, preRequisitos, materialNecessario, modulos } = req.body;
 
+  try {
     const curso = await prisma.curso.create({
       data: {
         nome,
@@ -68,57 +66,47 @@ cursoRouter.post('/', async (req: Request, res: Response) => {
         preRequisitos,
         materialNecessario,
         modulos: {
-          create: modulos?.map((modulo: any) => ({
+          create: modulos.map((modulo: any) => ({
             nome: modulo.nome,
             descricao: modulo.descricao,
-            aulas: {
-              create: modulo.aulas?.map((aula: any) => ({
-                nome: aula.nome,
-                descricao: aula.descricao,
-                cargaHoraria: aula.cargaHoraria,
-              })),
-            },
-          })),
-        },
+            cargaHorariaTotal: modulo.cargaHorariaTotal,
+            celulas: {
+              create: modulo.celulas.map((celula: any, index: number) => ({
+                ordem: celula.ordem,
+                siglaTecnica: celula.siglaTecnica
+              }))
+            }
+          }))
+        }
       },
       include: {
         modulos: {
           include: {
-            aulas: true,
-          },
-        },
-      },
+            celulas: true
+          }
+        }
+      }
     });
 
     return res.status(201).json(curso);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao criar curso' });
+    console.error('Erro ao criar curso:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // Atualizar curso
 cursoRouter.put('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { nome, descricao, cargaHorariaTotal, preRequisitos, materialNecessario, modulos } = req.body;
+
   try {
-    const { id } = req.params;
-    const { nome, descricao, cargaHorariaTotal, preRequisitos, materialNecessario, modulos } = req.body;
-
-    // Primeiro, excluir todos os módulos e aulas existentes
-    await prisma.aula.deleteMany({
-      where: {
-        modulo: {
-          cursoId: Number(id),
-        },
-      },
-    });
-
+    // Primeiro, excluir todos os módulos existentes (isso excluirá também as células devido ao onDelete: Cascade)
     await prisma.modulo.deleteMany({
-      where: {
-        cursoId: Number(id),
-      },
+      where: { cursoId: Number(id) }
     });
 
-    // Depois, atualizar o curso com os novos módulos e aulas
+    // Depois, criar os novos módulos com suas células
     const curso = await prisma.curso.update({
       where: { id: Number(id) },
       data: {
@@ -128,32 +116,32 @@ cursoRouter.put('/:id', async (req: Request, res: Response) => {
         preRequisitos,
         materialNecessario,
         modulos: {
-          create: modulos?.map((modulo: any) => ({
+          create: modulos.map((modulo: any) => ({
             nome: modulo.nome,
             descricao: modulo.descricao,
-            aulas: {
-              create: modulo.aulas?.map((aula: any) => ({
-                nome: aula.nome,
-                descricao: aula.descricao,
-                cargaHoraria: aula.cargaHoraria,
-              })),
-            },
-          })),
-        },
+            cargaHorariaTotal: modulo.cargaHorariaTotal,
+            celulas: {
+              create: modulo.celulas.map((celula: any, index: number) => ({
+                ordem: celula.ordem,
+                siglaTecnica: celula.siglaTecnica
+              }))
+            }
+          }))
+        }
       },
       include: {
         modulos: {
           include: {
-            aulas: true,
-          },
-        },
-      },
+            celulas: true
+          }
+        }
+      }
     });
 
     return res.json(curso);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao atualizar curso' });
+    console.error('Erro ao atualizar curso:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -162,16 +150,7 @@ cursoRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Primeiro, excluir todas as aulas
-    await prisma.aula.deleteMany({
-      where: {
-        modulo: {
-          cursoId: Number(id),
-        },
-      },
-    });
-
-    // Depois, excluir todos os módulos
+    // Primeiro, excluir todos os módulos
     await prisma.modulo.deleteMany({
       where: {
         cursoId: Number(id),

@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     const modulos = await prisma.modulo.findMany({
       include: {
         curso: true,
-        aulas: true,
+        celulas: true,
         alunoModulos: {
           include: {
             aluno: true
@@ -36,7 +36,7 @@ router.get('/:id', async (req, res) => {
       where: { id: Number(id) },
       include: {
         curso: true,
-        aulas: true,
+        celulas: true,
         alunoModulos: {
           include: {
             aluno: true
@@ -94,7 +94,7 @@ router.put('/:id/habilitar', async (req, res) => {
 router.put('/:id/concluir', async (req, res) => {
   try {
     const { id } = req.params;
-    const { alunoId, dataTermino } = req.body;
+    const { alunoId, dataFim } = req.body;
 
     const alunoModulo = await prisma.alunoModulo.update({
       where: {
@@ -104,8 +104,8 @@ router.put('/:id/concluir', async (req, res) => {
         }
       },
       data: {
-        dataTermino: dataTermino ? new Date(dataTermino) : null,
-        status: dataTermino ? 'CONCLUIDO' : 'PENDENTE'
+        dataFim: dataFim ? new Date(dataFim) : null,
+        status: dataFim ? 'CONCLUIDO' : 'PENDENTE'
       },
       include: {
         aluno: true,

@@ -4,363 +4,243 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Limpar o banco de dados
-  await prisma.alunoModulo.deleteMany();
-  await prisma.aula.deleteMany();
-  await prisma.modulo.deleteMany();
-  await prisma.aluno.deleteMany();
-  await prisma.curso.deleteMany();
-  await prisma.usuario.deleteMany();
+  try {
+    // Limpar o banco de dados
+    console.log('Limpando banco de dados...');
+    await prisma.presenca.deleteMany();
+    await prisma.alunoModulo.deleteMany();
+    await prisma.celula.deleteMany();
+    await prisma.modulo.deleteMany();
+    await prisma.aluno.deleteMany();
+    await prisma.curso.deleteMany();
+    await prisma.usuario.deleteMany();
 
-  console.log('Banco de dados limpo');
-
-  // Criar usuário admin
-  const adminUser = await prisma.usuario.create({
-    data: {
-      nome: 'Administrador',
-      email: 'admin@syssolda.com',
-      senha: await bcrypt.hash('admin123', 10),
-      role: 'ADMIN',
-    },
-  });
-
-  console.log('Usuário admin criado:', adminUser.email);
-
-  // Criar cursos com módulos e aulas
-  const soldaBasica = await prisma.curso.create({
-    data: {
-      nome: 'Solda Básica',
-      descricao: 'Curso introdutório às técnicas de soldagem',
-      cargaHorariaTotal: 60,
-      preRequisitos: 'Nenhum',
-      materialNecessario: 'Equipamento de proteção individual',
-      modulos: {
-        create: [
-          {
-            nome: 'Módulo 2 - Fundamentos',
-            descricao: 'Técnicas fundamentais de soldagem',
-            aulas: {
-              create: [
-                {
-                  nome: 'Introdução à Soldagem 1F',
-                  descricao: 'Posição plana - Filete',
-                  cargaHoraria: 4,
-                  siglaTecnica: '1F'
-                },
-                {
-                  nome: 'Soldagem 2F',
-                  descricao: 'Posição horizontal - Filete',
-                  cargaHoraria: 4,
-                  siglaTecnica: '2F'
-                },
-                {
-                  nome: 'Soldagem 3F',
-                  descricao: 'Posição vertical - Filete',
-                  cargaHoraria: 4,
-                  siglaTecnica: '3F'
-                },
-                {
-                  nome: 'Soldagem 4F',
-                  descricao: 'Posição sobre-cabeça - Filete',
-                  cargaHoraria: 4,
-                  siglaTecnica: '4F'
-                }
-              ],
-            },
-          },
-          {
-            nome: 'Módulo 3 - Técnicas Básicas',
-            descricao: 'Soldagem em groove posições 1G e 2G',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 1G - Parte 1',
-                  descricao: 'Posição plana - Groove',
-                  cargaHoraria: 4,
-                  siglaTecnica: '1G'
-                },
-                {
-                  nome: 'Soldagem 1G - Parte 2',
-                  descricao: 'Posição plana - Groove Avançado',
-                  cargaHoraria: 4,
-                  siglaTecnica: '1G'
-                },
-                {
-                  nome: 'Soldagem 2G - Parte 1',
-                  descricao: 'Posição horizontal - Groove',
-                  cargaHoraria: 4,
-                  siglaTecnica: '2G'
-                },
-                {
-                  nome: 'Soldagem 2G - Parte 2',
-                  descricao: 'Posição horizontal - Groove Avançado',
-                  cargaHoraria: 4,
-                  siglaTecnica: '2G'
-                }
-              ],
-            },
-          }
-        ],
+    // Criar usuário admin
+    console.log('Criando usuário administrador...');
+    const adminUser = await prisma.usuario.create({
+      data: {
+        nome: 'Administrador',
+        email: 'admin@syssolda.com',
+        senha: await bcrypt.hash('admin123', 10),
+        role: 'ADMIN',
       },
-    },
-    include: {
-      modulos: {
-        include: {
-          aulas: true,
+    });
+    console.log('Usuário admin criado:', adminUser.email);
+
+    // Criar cursos
+    console.log('Criando cursos...');
+    const cursoPrincipal = await prisma.curso.create({
+      data: {
+        nome: 'Soldagem Industrial Avançada',
+        descricao: 'Curso completo de soldagem industrial com práticas avançadas',
+        cargaHorariaTotal: 120,
+        preRequisitos: 'Idade mínima de 18 anos, Ensino Médio Completo',
+        materialNecessario: 'EPI completo, material será fornecido pelo curso',
+        modulos: {
+          create: [
+            {
+              nome: 'Fundamentos de Soldagem',
+              descricao: 'Introdução aos conceitos básicos e segurança',
+              cargaHorariaTotal: 40,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'FUN-1' },
+                  { ordem: 2, siglaTecnica: 'FUN-2' },
+                  { ordem: 3, siglaTecnica: 'FUN-3' },
+                  { ordem: 4, siglaTecnica: 'FUN-4' },
+                ],
+              },
+            },
+            {
+              nome: 'Soldagem MIG/MAG',
+              descricao: 'Técnicas de soldagem com processos MIG/MAG',
+              cargaHorariaTotal: 40,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'MIG-1' },
+                  { ordem: 2, siglaTecnica: 'MIG-2' },
+                  { ordem: 3, siglaTecnica: 'MIG-3' },
+                  { ordem: 4, siglaTecnica: 'MIG-4' },
+                ],
+              },
+            },
+            {
+              nome: 'Soldagem TIG',
+              descricao: 'Técnicas avançadas de soldagem TIG',
+              cargaHorariaTotal: 40,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'TIG-1' },
+                  { ordem: 2, siglaTecnica: 'TIG-2' },
+                  { ordem: 3, siglaTecnica: 'TIG-3' },
+                  { ordem: 4, siglaTecnica: 'TIG-4' },
+                ],
+              },
+            },
+          ],
         },
       },
-    },
-  });
-
-  const soldaAvancada = await prisma.curso.create({
-    data: {
-      nome: 'Solda Avançada',
-      descricao: 'Técnicas avançadas de soldagem para profissionais',
-      cargaHorariaTotal: 80,
-      preRequisitos: 'Curso de Solda Básica ou experiência equivalente',
-      materialNecessario: 'Equipamento de proteção individual, ferramentas específicas',
-      modulos: {
-        create: [
-          {
-            nome: 'Módulo 4 - Soldagem 3G',
-            descricao: 'Técnicas de soldagem vertical em groove',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 3G - Teoria',
-                  descricao: 'Fundamentos da soldagem vertical',
-                  cargaHoraria: 4,
-                  siglaTecnica: '3G'
-                },
-                {
-                  nome: 'Soldagem 3G - Prática Básica',
-                  descricao: 'Exercícios iniciais',
-                  cargaHoraria: 6,
-                  siglaTecnica: '3G'
-                },
-                {
-                  nome: 'Soldagem 3G - Prática Intermediária',
-                  descricao: 'Exercícios intermediários',
-                  cargaHoraria: 6,
-                  siglaTecnica: '3G'
-                },
-                {
-                  nome: 'Soldagem 3G - Prática Avançada',
-                  descricao: 'Exercícios avançados',
-                  cargaHoraria: 6,
-                  siglaTecnica: '3G'
-                }
-              ],
-            },
+      include: {
+        modulos: {
+          include: {
+            celulas: true,
           },
-          {
-            nome: 'Módulo 5 - Soldagem 4G',
-            descricao: 'Técnicas de soldagem sobre-cabeça em groove',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 4G - Teoria',
-                  descricao: 'Fundamentos da soldagem sobre-cabeça',
-                  cargaHoraria: 4,
-                  siglaTecnica: '4G'
-                },
-                {
-                  nome: 'Soldagem 4G - Prática Básica',
-                  descricao: 'Exercícios iniciais',
-                  cargaHoraria: 6,
-                  siglaTecnica: '4G'
-                },
-                {
-                  nome: 'Soldagem 4G - Prática Intermediária',
-                  descricao: 'Exercícios intermediários',
-                  cargaHoraria: 6,
-                  siglaTecnica: '4G'
-                },
-                {
-                  nome: 'Soldagem 4G - Prática Avançada',
-                  descricao: 'Exercícios avançados',
-                  cargaHoraria: 6,
-                  siglaTecnica: '4G'
-                }
-              ],
-            },
-          },
-          {
-            nome: 'Módulo 6 - Soldagem 2GT',
-            descricao: 'Soldagem de tubulação - posição horizontal',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 2GT - Teoria',
-                  descricao: 'Fundamentos da soldagem de tubulação',
-                  cargaHoraria: 4,
-                  siglaTecnica: '2GT'
-                },
-                {
-                  nome: 'Soldagem 2GT - Prática Básica',
-                  descricao: 'Exercícios iniciais',
-                  cargaHoraria: 6,
-                  siglaTecnica: '2GT'
-                },
-                {
-                  nome: 'Soldagem 2GT - Prática Intermediária',
-                  descricao: 'Exercícios intermediários',
-                  cargaHoraria: 6,
-                  siglaTecnica: '2GT'
-                },
-                {
-                  nome: 'Soldagem 2GT - Prática Avançada',
-                  descricao: 'Exercícios avançados',
-                  cargaHoraria: 6,
-                  siglaTecnica: '2GT'
-                }
-              ],
-            },
-          },
-          {
-            nome: 'Módulo 7 - Soldagem 5GT',
-            descricao: 'Soldagem de tubulação - posição 45 graus',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 5GT - Teoria',
-                  descricao: 'Fundamentos da soldagem em 45 graus',
-                  cargaHoraria: 4,
-                  siglaTecnica: '5GT'
-                },
-                {
-                  nome: 'Soldagem 5GT - Prática Básica',
-                  descricao: 'Exercícios iniciais',
-                  cargaHoraria: 6,
-                  siglaTecnica: '5GT'
-                },
-                {
-                  nome: 'Soldagem 5GT - Prática Intermediária',
-                  descricao: 'Exercícios intermediários',
-                  cargaHoraria: 6,
-                  siglaTecnica: '5GT'
-                },
-                {
-                  nome: 'Soldagem 5GT - Prática Avançada',
-                  descricao: 'Exercícios avançados',
-                  cargaHoraria: 6,
-                  siglaTecnica: '5GT'
-                }
-              ],
-            },
-          },
-          {
-            nome: 'Módulo 8 - Soldagem 6GT',
-            descricao: 'Soldagem de tubulação - posição inclinada',
-            aulas: {
-              create: [
-                {
-                  nome: 'Soldagem 6GT - Teoria',
-                  descricao: 'Fundamentos da soldagem inclinada',
-                  cargaHoraria: 4,
-                  siglaTecnica: '6GT'
-                },
-                {
-                  nome: 'Soldagem 6GT - Prática Básica',
-                  descricao: 'Exercícios iniciais',
-                  cargaHoraria: 6,
-                  siglaTecnica: '6GT'
-                },
-                {
-                  nome: 'Soldagem 6GT - Prática Intermediária',
-                  descricao: 'Exercícios intermediários',
-                  cargaHoraria: 6,
-                  siglaTecnica: '6GT'
-                },
-                {
-                  nome: 'Soldagem 6GT - Prática Avançada',
-                  descricao: 'Exercícios avançados',
-                  cargaHoraria: 6,
-                  siglaTecnica: '6GT'
-                }
-              ],
-            },
-          }
-        ],
-      },
-    },
-    include: {
-      modulos: {
-        include: {
-          aulas: true,
         },
       },
-    },
-  });
+    });
 
-  console.log('Cursos criados:', soldaBasica.nome, soldaAvancada.nome);
-
-  // Criar alunos com módulos selecionados
-  const dataAtual = new Date();
-  const dataFutura = new Date();
-  dataFutura.setMonth(dataFutura.getMonth() + 3);
-
-  const aluno1 = await prisma.aluno.create({
-    data: {
-      nome: 'João Silva',
-      cpf: '123.456.789-00',
-      email: 'joao@exemplo.com',
-      telefone: '(11) 98765-4321',
-      idade: 25,
-      usaOculos: true,
-      destroCanhoto: 'DESTRO',
-      cursoId: soldaBasica.id,
-      alunoModulos: {
-        create: [
-          {
-            moduloId: soldaBasica.modulos[0].id,
-            status: 'EM_ANDAMENTO',
-            dataInicio: dataAtual,
-            dataTermino: dataFutura,
-          },
-          {
-            moduloId: soldaBasica.modulos[1].id,
-            status: 'PENDENTE',
-            dataInicio: null,
-            dataTermino: null,
-          },
-        ],
+    const cursoBasico = await prisma.curso.create({
+      data: {
+        nome: 'Introdução à Soldagem',
+        descricao: 'Curso básico para iniciantes em soldagem',
+        cargaHorariaTotal: 60,
+        preRequisitos: 'Idade mínima de 16 anos',
+        materialNecessario: 'EPI básico, material será fornecido pelo curso',
+        modulos: {
+          create: [
+            {
+              nome: 'Segurança na Soldagem',
+              descricao: 'Fundamentos de segurança e EPIs',
+              cargaHorariaTotal: 20,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'SEG-1' },
+                  { ordem: 2, siglaTecnica: 'SEG-2' },
+                ],
+              },
+            },
+            {
+              nome: 'Soldagem Básica',
+              descricao: 'Introdução às técnicas básicas',
+              cargaHorariaTotal: 40,
+              celulas: {
+                create: [
+                  { ordem: 1, siglaTecnica: 'BAS-1' },
+                  { ordem: 2, siglaTecnica: 'BAS-2' },
+                  { ordem: 3, siglaTecnica: 'BAS-3' },
+                ],
+              },
+            },
+          ],
+        },
       },
-    },
-  });
-
-  const aluno2 = await prisma.aluno.create({
-    data: {
-      nome: 'Maria Oliveira',
-      cpf: '987.654.321-00',
-      email: 'maria@exemplo.com',
-      telefone: '(11) 91234-5678',
-      idade: 30,
-      usaOculos: false,
-      destroCanhoto: 'CANHOTO',
-      cursoId: soldaAvancada.id,
-      alunoModulos: {
-        create: [
-          {
-            moduloId: soldaAvancada.modulos[0].id,
-            status: 'CONCLUIDO',
-            dataInicio: new Date(dataAtual.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 dias atrás
-            dataTermino: dataAtual,
+      include: {
+        modulos: {
+          include: {
+            celulas: true,
           },
-          {
-            moduloId: soldaAvancada.modulos[1].id,
-            status: 'EM_ANDAMENTO',
-            dataInicio: dataAtual,
-            dataTermino: dataFutura,
-          },
-        ],
+        },
       },
-    },
-  });
+    });
 
-  console.log('Alunos criados:', aluno1.nome, aluno2.nome);
+    console.log('Cursos criados com sucesso!');
 
-  console.log('Seed concluído com sucesso!');
+    // Criar alunos
+    console.log('Criando alunos...');
+    const alunos = await Promise.all([
+      prisma.aluno.create({
+        data: {
+          nome: 'João Silva',
+          cpf: '123.456.789-00',
+          email: 'joao.silva@email.com',
+          telefone: '(11) 98765-4321',
+          idade: 25,
+          usaOculos: true,
+          destroCanhoto: 'DESTRO',
+          cursoId: cursoPrincipal.id,
+          alunoModulos: {
+            create: cursoPrincipal.modulos.map((modulo) => ({
+              moduloId: modulo.id,
+              status: 'PENDENTE',
+              dataInicio: new Date(),
+            })),
+          },
+        },
+      }),
+      prisma.aluno.create({
+        data: {
+          nome: 'Maria Santos',
+          cpf: '987.654.321-00',
+          email: 'maria.santos@email.com',
+          telefone: '(11) 91234-5678',
+          idade: 22,
+          usaOculos: false,
+          destroCanhoto: 'CANHOTO',
+          cursoId: cursoBasico.id,
+          alunoModulos: {
+            create: cursoBasico.modulos.map((modulo) => ({
+              moduloId: modulo.id,
+              status: 'PENDENTE',
+              dataInicio: new Date(),
+            })),
+          },
+        },
+      }),
+      prisma.aluno.create({
+        data: {
+          nome: 'Pedro Oliveira',
+          cpf: '456.789.123-00',
+          email: 'pedro.oliveira@email.com',
+          telefone: '(11) 94567-8901',
+          idade: 30,
+          usaOculos: true,
+          destroCanhoto: 'DESTRO',
+          cursoId: cursoPrincipal.id,
+          alunoModulos: {
+            create: cursoPrincipal.modulos.map((modulo) => ({
+              moduloId: modulo.id,
+              status: 'PENDENTE',
+              dataInicio: new Date(),
+            })),
+          },
+        },
+      }),
+    ]);
+
+    console.log('Alunos criados com sucesso!');
+
+    // Criar algumas presenças de exemplo
+    console.log('Criando registros de presença...');
+    
+    // Para o primeiro aluno
+    const primeiroModulo = cursoPrincipal.modulos[0];
+    await Promise.all(
+      primeiroModulo.celulas.map(async (celula, index) => {
+        await prisma.presenca.create({
+          data: {
+            alunoId: alunos[0].id,
+            celulaId: celula.id,
+            presente: index < 2 ? true : null, // Primeiras duas células com presença, resto não registrado
+            horasFeitas: index < 2 ? 4 : 0,
+            data: index < 2 ? new Date() : null,
+          },
+        });
+      })
+    );
+
+    // Para o segundo aluno
+    const moduloBasico = cursoBasico.modulos[0];
+    await Promise.all(
+      moduloBasico.celulas.map(async (celula, index) => {
+        await prisma.presenca.create({
+          data: {
+            alunoId: alunos[1].id,
+            celulaId: celula.id,
+            presente: index === 0 ? true : null, // Primeira célula com presença, resto não registrado
+            horasFeitas: index === 0 ? 4 : 0,
+            data: index === 0 ? new Date() : null,
+          },
+        });
+      })
+    );
+
+    console.log('Registros de presença criados com sucesso!');
+    console.log('Seed concluído com sucesso!');
+
+  } catch (error) {
+    console.error('Erro durante o seed:', error);
+    throw error;
+  }
 }
 
 main()
@@ -370,4 +250,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  }); 
+  });

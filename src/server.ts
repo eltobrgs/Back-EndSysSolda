@@ -8,7 +8,7 @@ import authRoutes from './routes/auth.routes';
 import alunoRoutes from './routes/aluno.routes';
 import cursoRoutes from './routes/curso.routes';
 import moduloRoutes from './routes/modulo.routes';
-import aulaRoutes from './routes/aula.routes';
+import celulaRoutes from './routes/celula.routes';
 
 dotenv.config();
 
@@ -24,7 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/alunos', alunoRoutes);
 app.use('/api/cursos', cursoRoutes);
 app.use('/api/modulos', moduloRoutes);
-app.use('/api/aulas', aulaRoutes);
+app.use('/api/celulas', celulaRoutes);
 
 const PORT = process.env.PORT || 3000;
 

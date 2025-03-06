@@ -30,18 +30,21 @@ model Aluno {
   cpf           String        @unique
   email         String        @unique
   telefone      String
+  idade         Int
   usaOculos     Boolean       @default(false)
   destroCanhoto String        @default("DESTRO")
-  idade         Int
   cursoId       Int
-  curso         Curso         @relation(fields: [cursoId], references: [id])
+  curso         Curso         @relation(fields: [cursoId], references: [id], onDelete: Cascade)
   alunoModulos  AlunoModulo[]
+  presencas     Presenca[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@map("alunos")
 }
 
 model Curso {
-  id                 Int      @id @default(autoincrement())
+  id                 Int           @id @default(autoincrement())
   nome               String
   descricao         String
   cargaHorariaTotal Int
@@ -49,47 +52,60 @@ model Curso {
   materialNecessario String?
   modulos           Modulo[]
   alunos            Aluno[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model Modulo {
-  id            Int           @id @default(autoincrement())
-  nome          String
-  descricao     String
-  cursoId       Int
-  curso         Curso         @relation(fields: [cursoId], references: [id])
-  aulas         Aula[]
-  alunoModulos  AlunoModulo[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                Int           @id @default(autoincrement())
+  nome              String
+  descricao         String
+  cargaHorariaTotal Int
+  curso             Curso         @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  cursoId           Int
+  celulas           Celula[]
+  alunoModulos      AlunoModulo[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
-model Aula {
-  id            Int      @id @default(autoincrement())
-  nome          String
-  descricao     String
-  cargaHoraria  Int
-  siglaTecnica  String?  // Novo campo
+model Celula {
+  id            Int        @id @default(autoincrement())
+  ordem         Int
+  siglaTecnica  String
+  modulo        Modulo     @relation(fields: [moduloId], references: [id], onDelete: Cascade)
   moduloId      Int
-  modulo        Modulo   @relation(fields: [moduloId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  presencas     Presenca[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
 
-  @@map("aulas")
+model Presenca {
+  id          Int       @id @default(autoincrement())
+  aluno       Aluno     @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  alunoId     Int
+  celula      Celula    @relation(fields: [celulaId], references: [id], onDelete: Cascade)
+  celulaId    Int
+  data        DateTime?
+  presente    Boolean?
+  horasFeitas Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([alunoId, celulaId], name: "alunoId_celulaId")
 }
 
 model AlunoModulo {
-  id          Int      @id @default(autoincrement())
-  aluno       Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
-  alunoId     Int
-  modulo      Modulo   @relation(fields: [moduloId], references: [id], onDelete: Cascade)
-  moduloId    Int
-  status      String   @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, CONCLUIDO
-  dataInicio  DateTime?
-  dataTermino DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int       @id @default(autoincrement())
+  aluno         Aluno     @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  alunoId       Int
+  modulo        Modulo    @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  moduloId      Int
+  status        String    @default("pendente")
+  dataInicio    DateTime?
+  dataFim       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  @@unique([alunoId, moduloId])
+  @@unique([alunoId, moduloId], name: "alunoId_moduloId")
 }
